@@ -40,6 +40,7 @@ class PAMSiteResult(BaseModel):
 class ScanRequest(BaseModel):
     sequence: str
     cas_type: str = Field("cas9", description="cas9 | cas12a | cas13")
+    session_id: Optional[str] = Field(None, description="Workflow session UUID from /sequence/*")
 
 
 class RankedGuideResult(BaseModel):
@@ -104,6 +105,8 @@ class NHEJRequest(BaseModel):
     cut_position: int
     deletion_size: Optional[int] = Field(None, ge=1, le=10,
                                          description="Bases to delete (1–10); random if omitted")
+    session_id: Optional[str] = None
+    cas_type: Optional[str] = None
 
 
 class HDRRequest(BaseModel):
@@ -140,6 +143,10 @@ class TranslateResponse(BaseModel):
 class CompareRequest(BaseModel):
     original_sequence: str
     edited_sequence: str
+    session_id: Optional[str] = None
+    repair_type: Optional[str] = None
+    cut_position: Optional[int] = None
+    cas_type: Optional[str] = None
 
 
 class CompareResponse(BaseModel):

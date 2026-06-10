@@ -18,8 +18,12 @@ from models.schemas import (
 from services.cas_systems import CAS_REGISTRY
 from services.off_target import predict_off_targets
 from services.safety_score import compute_safety_score
-from services.gene_info import lookup_gene_info
-from services.literature_validation import list_validation_cases, validate_against_literature
+from services.catalog_db import (
+    list_literature_cases_from_db,
+    list_papers_for_gene,
+    lookup_gene_from_db,
+)
+from services.literature_validation import validate_against_literature
 from services.validator import validate_and_clean
 
 router = APIRouter(tags=["Advanced CRISPR"])
@@ -47,7 +51,13 @@ async def get_cas_systems():
     summary="Gene information card for NCBI accession",
 )
 async def gene_info(accession: str):
-    info = lookup_gene_info(accession=accession)
+    info = lookup_gene_from_db(accession=accession)
+    papers = list_papers_for_gene(info.get("gene_symbol", ""))
+    if papers:
+        info["supporting_studies"] = [
+            f"{p['authors']}, {p['journal']} {p['year']} (PMID {p['pmid']})"
+            for p in papers[:5]
+        ]
     return GeneInfoResponse(**info)
 
 
@@ -100,7 +110,7 @@ async def safety_score(body: SafetyScoreRequest):
     summary="Published validation case studies",
 )
 async def validation_cases():
-    return [LiteratureCaseSummary(**c) for c in list_validation_cases()]
+    return [LiteratureCaseSummary(**c) for c in list_literature_cases_from_db()]
 
 
 @router.post(

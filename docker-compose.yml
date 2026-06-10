@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: crispr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crispr
+      POSTGRES_PASSWORD: crispr_secret
+      POSTGRES_DB: crispr_sim
+    ports:
+      - "5432:5432"
+    volumes:
+      - crispr_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crispr -d crispr_sim"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: crispr-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://crispr:crispr_secret@db:5432/crispr_sim
+      JWT_SECRET: change-me-use-long-random-string-in-production
+      REQUIRE_AUTH: "true"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
+      CORS_ORIGINS: "*"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  crispr_pg_data:

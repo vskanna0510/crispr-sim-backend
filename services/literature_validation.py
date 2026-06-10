@@ -59,7 +59,15 @@ def validate_against_literature(
     cut_position: Optional[int] = None,
     deletion_size: Optional[int] = None,
 ) -> Dict:
-    case = LITERATURE_CASES.get(case_id)
+    case = None
+    try:
+        from services.catalog_db import get_literature_case_from_db
+
+        case = get_literature_case_from_db(case_id)
+    except Exception:
+        pass
+    if not case:
+        case = LITERATURE_CASES.get(case_id)
     if not case:
         raise ValueError(f"Unknown validation case '{case_id}'")
 

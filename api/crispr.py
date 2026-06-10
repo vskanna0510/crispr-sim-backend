@@ -1,7 +1,15 @@
 """CRISPR simulation API routes: PAM scan, cut, NHEJ, HDR."""
 
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from api.deps import require_api_user
+from db.base import get_db
+from db.models import User
+from services.persistence import save_pam_scan
 from services.validator import validate_and_clean
 from services.cas_systems import get_cas_system, scan_pam_for_cas, extract_grna_for_cas
 from services.cut_engine import simulate_cut
@@ -65,7 +73,11 @@ def _merge_ranking(pam_sites: list, ranking: dict) -> list:
 
 
 @router.post("/scan", response_model=ScanResponse, summary="Scan PAM sites for selected Cas system")
-async def scan_pam(request: ScanRequest):
+async def scan_pam(
+    request: ScanRequest,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(require_api_user),
+):
     seq = _require_valid_sequence(request.sequence)
     try:
         cas = get_cas_system(request.cas_type)
@@ -93,6 +105,20 @@ async def scan_pam(request: ScanRequest):
             reasons=ranking.get("recommendation_reasons", []),
         )
 
+    if request.session_id:
+        try:
+            save_pam_scan(
+                db,
+                session_id=UUID(request.session_id),
+                user_id=user.id if user else None,
+                cas_type=cas.id,
+                pam_count=len(pam_results),
+                ranked_guides=ranking.get("ranked_guides"),
+                recommendation=ranking.get("recommended_guide"),
+            )
+        except Exception:
+            db.rollback()
+
     return ScanResponse(
         sequence=seq,
         pam_sites=pam_results,
@@ -108,7 +134,10 @@ async def scan_pam(request: ScanRequest):
 
 
 @router.post("/cut", response_model=CutResponse, summary="Simulate Cas cut at selected PAM")
-async def cut(request: CutRequest):
+async def cut(
+    request: CutRequest,
+    user: Optional[User] = Depends(require_api_user),
+):
     seq = _require_valid_sequence(request.sequence)
     if request.pam_start < 0 or request.pam_start >= len(seq):
         raise HTTPException(
@@ -128,7 +157,10 @@ async def cut(request: CutRequest):
 
 
 @router.post("/nhej", response_model=RepairResponse, summary="Apply NHEJ (indel) repair")
-async def nhej(request: NHEJRequest):
+async def nhej(
+    request: NHEJRequest,
+    user: Optional[User] = Depends(require_api_user),
+):
     seq = _require_valid_sequence(request.sequence)
     if request.cut_position < 0 or request.cut_position >= len(seq):
         raise HTTPException(status_code=400, detail="cut_position is out of range.")
@@ -137,7 +169,10 @@ async def nhej(request: NHEJRequest):
 
 
 @router.post("/hdr", response_model=RepairResponse, summary="Apply HDR (donor template) repair")
-async def hdr(request: HDRRequest):
+async def hdr(
+    request: HDRRequest,
+    user: Optional[User] = Depends(require_api_user),
+):
     seq = _require_valid_sequence(request.sequence)
     donor_check = validate_and_clean(request.donor_template)
     if not donor_check["valid"]:

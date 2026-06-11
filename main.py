@@ -23,6 +23,7 @@ from api.chat import router as chat_router
 from api.advanced import router as advanced_router
 from api.auth import router as auth_router
 from api.history import router as history_router
+from api.settings import router as settings_router
 from core.config import get_settings
 from utils.database import database_status, init_db
 
@@ -60,6 +61,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(history_router)
+app.include_router(settings_router)
 app.include_router(sequence_router)
 app.include_router(crispr_router)
 app.include_router(analysis_router)

@@ -12,6 +12,7 @@ from db.base import get_db
 from db.models import User
 from models.schemas import SequencePasteRequest, SequenceResponse
 from services.persistence import create_sequence_session
+from services.user_settings import user_saves_history
 from services.sequence_input import fetch_from_ncbi, parse_fasta_content
 from services.validator import validate_and_clean
 
@@ -73,7 +74,8 @@ async def paste_sequence(
             detail=f"Invalid characters found: {result['errors']}",
         )
     session_id = str(uuid.uuid4())
-    _persist_session(db, user, UUID(session_id), result["cleaned"], result, source="paste")
+    if user_saves_history(db, user.id if user else None):
+        _persist_session(db, user, UUID(session_id), result["cleaned"], result, source="paste")
     log_audit(
         db,
         user_id=user.id if user else None,
@@ -108,7 +110,8 @@ async def upload_fasta(
             detail=f"Invalid characters: {result['errors']}",
         )
     session_id = str(uuid.uuid4())
-    _persist_session(db, user, UUID(session_id), result["cleaned"], result, source="fasta")
+    if user_saves_history(db, user.id if user else None):
+        _persist_session(db, user, UUID(session_id), result["cleaned"], result, source="fasta")
     log_audit(
         db,
         user_id=user.id if user else None,
@@ -144,15 +147,16 @@ async def fetch_ncbi(
             detail=f"Fetched sequence contains invalid characters: {result['errors']}",
         )
     session_id = str(uuid.uuid4())
-    _persist_session(
-        db,
-        user,
-        UUID(session_id),
-        result["cleaned"],
-        result,
-        accession=accession,
-        source="ncbi",
-    )
+    if user_saves_history(db, user.id if user else None):
+        _persist_session(
+            db,
+            user,
+            UUID(session_id),
+            result["cleaned"],
+            result,
+            accession=accession,
+            source="ncbi",
+        )
     log_audit(
         db,
         user_id=user.id if user else None,

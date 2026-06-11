@@ -17,6 +17,7 @@ from models.schemas import (
 )
 from services.analysis import compare_sequences
 from services.persistence import save_simulation_record
+from services.user_settings import user_saves_history
 from services.translation import translate_sequence
 from services.validator import validate_and_clean
 
@@ -65,7 +66,12 @@ async def compare(
     result = compare_sequences(orig, edit)
     response = CompareResponse(**result)
 
-    if request.session_id and request.repair_type and request.cut_position is not None:
+    if (
+        request.session_id
+        and request.repair_type
+        and request.cut_position is not None
+        and user_saves_history(db, user.id if user else None)
+    ):
         try:
             save_simulation_record(
                 db,

@@ -39,6 +39,8 @@ class User(Base):
     sessions: Mapped[list["SequenceSession"]] = relationship(back_populates="user")
     simulations: Mapped[list["SimulationRecord"]] = relationship(back_populates="user")
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="user")
+    settings: Mapped["UserSettings | None"] = relationship(back_populates="user", uselist=False)
+    app_rating: Mapped["AppRating | None"] = relationship(back_populates="user", uselist=False)
 
 
 class RevokedToken(Base):
@@ -173,3 +175,29 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     user: Mapped[User | None] = relationship(back_populates="audit_logs")
+
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), primary_key=True
+    )
+    save_history: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    user: Mapped[User] = relationship(back_populates="settings")
+
+
+class AppRating(Base):
+    __tablename__ = "app_ratings"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), primary_key=True
+    )
+    stars: Mapped[int] = mapped_column(Integer)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    user: Mapped[User] = relationship(back_populates="app_rating")

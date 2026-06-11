@@ -10,6 +10,7 @@ from api.deps import require_api_user
 from db.base import get_db
 from db.models import User
 from services.persistence import save_pam_scan
+from services.user_settings import user_saves_history
 from services.validator import validate_and_clean
 from services.cas_systems import get_cas_system, scan_pam_for_cas, extract_grna_for_cas
 from services.cut_engine import simulate_cut
@@ -105,7 +106,7 @@ async def scan_pam(
             reasons=ranking.get("recommendation_reasons", []),
         )
 
-    if request.session_id:
+    if request.session_id and user_saves_history(db, user.id if user else None):
         try:
             save_pam_scan(
                 db,

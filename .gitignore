@@ -16,7 +16,13 @@ __pycache__/
 # Test / debug scripts
 test_integration.py
 verify.py
+.pytest_cache/
+
+# Environment and Secrets
+.env
+.env.*
 
 # OS
 .DS_Store
 Thumbs.db
+

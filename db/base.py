@@ -9,11 +9,15 @@ from core.config import get_settings
 
 settings = get_settings()
 
+connect_args = {"check_same_thread": False} if "sqlite" in settings.database_url else {}
+engine_kwargs = {"pool_pre_ping": True}
+if "sqlite" not in settings.database_url:
+    engine_kwargs.update({"pool_size": 5, "max_overflow": 10})
+
 engine = create_engine(
     settings.database_url,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
+    connect_args=connect_args,
+    **engine_kwargs
 )
 
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)

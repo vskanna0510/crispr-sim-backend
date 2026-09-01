@@ -74,6 +74,70 @@ def list_simulations(
     ]
 
 
+@router.delete("/sessions/{session_id}", summary="Delete a specific project/session")
+def delete_session(
+    session_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    from uuid import UUID
+    from db.models import SequenceSession, SimulationRecord
+    from fastapi import HTTPException, status
+
+    try:
+        sess_uuid = UUID(session_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid session UUID format.")
+
+    session_obj = (
+        db.query(SequenceSession)
+        .filter(SequenceSession.id == sess_uuid, SequenceSession.user_id == user.id)
+        .first()
+    )
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found or unauthorized.")
+
+    db.query(SimulationRecord).filter(SimulationRecord.session_id == sess_uuid).delete()
+    db.delete(session_obj)
+    db.commit()
+    return {"message": "Project session and simulations deleted successfully."}
+
+
+@router.delete("/simulations/{simulation_id}", summary="Delete a specific simulation record")
+def delete_simulation(
+    simulation_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    from db.models import SimulationRecord
+    from fastapi import HTTPException
+
+    sim = (
+        db.query(SimulationRecord)
+        .filter(SimulationRecord.id == simulation_id, SimulationRecord.user_id == user.id)
+        .first()
+    )
+    if not sim:
+        raise HTTPException(status_code=404, detail="Simulation not found or unauthorized.")
+
+    db.delete(sim)
+    db.commit()
+    return {"message": "Simulation record deleted successfully."}
+
+
+@router.delete("/clear", summary="Delete all project sessions and simulation records for user")
+def clear_all_user_data(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    from db.models import SequenceSession, SimulationRecord
+
+    db.query(SimulationRecord).filter(SimulationRecord.user_id == user.id).delete()
+    db.query(SequenceSession).filter(SequenceSession.user_id == user.id).delete()
+    db.commit()
+    return {"message": "All user project and simulation data cleared successfully."}
+
+
 @router.get("/papers", response_model=list[dict[str, Any]])
 def list_research_papers(db: Session = Depends(get_db)):
     from db.models import ResearchPaper

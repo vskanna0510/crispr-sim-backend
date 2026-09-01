@@ -184,6 +184,8 @@ class UserSettings(Base):
         Uuid, ForeignKey("users.id"), primary_key=True
     )
     save_history: Mapped[bool] = mapped_column(Boolean, default=True)
+    theme_mode: Mapped[str] = mapped_column(String(16), default="system")
+    analytics_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     user: Mapped[User] = relationship(back_populates="settings")

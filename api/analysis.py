@@ -3,6 +3,7 @@
 from typing import Optional
 from uuid import UUID
 
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -90,3 +91,73 @@ async def compare(
             db.rollback()
 
     return response
+
+
+class ExportAnalysisRequest(BaseModel):
+    summary: Optional[str] = "CRISPR gene editing simulation analysis."
+    repair_type: Optional[str] = "NHEJ"
+    safety_score: Optional[int] = 62
+    safety_label: Optional[str] = "Moderate"
+    frameshift: Optional[bool] = False
+    premature_stop: Optional[bool] = False
+    original_length: Optional[int] = 276
+    edited_length: Optional[int] = 269
+    length_diff: Optional[int] = 7
+    original_dna: Optional[str] = ""
+    edited_dna: Optional[str] = ""
+    original_protein: Optional[str] = ""
+    edited_protein: Optional[str] = ""
+    original_mrna: Optional[str] = ""
+    edited_mrna: Optional[str] = ""
+
+
+@router.post("/export/pdf", summary="Export analysis report as PDF")
+async def export_pdf(body: ExportAnalysisRequest):
+    from fastapi.responses import Response
+    from services.export_service import generate_analysis_pdf
+
+    pdf_bytes = generate_analysis_pdf(body.model_dump())
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="crispr_analysis_report.pdf"'},
+    )
+
+
+@router.post("/export/excel", summary="Export analysis report as Excel (.xlsx)")
+async def export_excel(body: ExportAnalysisRequest):
+    from fastapi.responses import Response
+    from services.export_service import generate_analysis_excel
+
+    excel_bytes = generate_analysis_excel(body.model_dump())
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="crispr_analysis_report.xlsx"'},
+    )
+
+
+@router.post("/export/csv", summary="Export analysis report as CSV")
+async def export_csv(body: ExportAnalysisRequest):
+    from fastapi.responses import Response
+    from services.export_service import generate_analysis_csv
+
+    csv_text = generate_analysis_csv(body.model_dump())
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="crispr_analysis_report.csv"'},
+    )
+
+
+@router.post("/export/fasta", summary="Export DNA/Protein sequences as FASTA")
+async def export_fasta(body: ExportAnalysisRequest):
+    from fastapi.responses import Response
+    from services.export_service import generate_analysis_fasta
+
+    fasta_text = generate_analysis_fasta(body.model_dump())
+    return Response(
+        content=fasta_text,
+        media_type="text/plain",
+        headers={"Content-Disposition": 'attachment; filename="crispr_sequences.fasta"'},
+    )

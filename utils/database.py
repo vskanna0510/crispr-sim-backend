@@ -13,7 +13,10 @@ def init_db() -> None:
         from db.base import Base, engine
         from scripts.seed_database import seed
 
+        from utils.migrations import apply_schema_patches
+
         Base.metadata.create_all(bind=engine)
+        apply_schema_patches(engine)
         seed()
         logger.info("PostgreSQL schema ready and seed data loaded.")
     except Exception as exc:
